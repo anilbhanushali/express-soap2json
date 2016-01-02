@@ -1,5 +1,6 @@
 var util = require('util'),
     soap = require('soap'),
+    express = require('express'),
     ExpressRouter = require('express/lib/router');
 
 
@@ -9,8 +10,9 @@ exports = module.exports = function(soapServerUrl, prefix) {
    if (prefix.substr(-1) !== '/') prefix += '/';
    if (prefix[0] !== '/') prefix = '/'+prefix;
 
-   var router = new ExpressRouter();
-   router.route('get', prefix+':service/:method', 
+   //var router = new ExpressRouter();
+   var router = express.Router();
+   router.get(prefix+':service/:method', 
       [resolveWsdl(soapServerUrl), resolveService, normalizeQuerystring, errorHandler], 
       function(req, res) {
          req._service( req._query, function(err, result) {
@@ -24,7 +26,21 @@ exports = module.exports = function(soapServerUrl, prefix) {
       }
    );
 
-   return router.middleware.bind(router);
+   /*router.route('get', prefix+':service/:method', 
+      [resolveWsdl(soapServerUrl), resolveService, normalizeQuerystring, errorHandler], 
+      function(req, res) {
+         req._service( req._query, function(err, result) {
+            if (err) { 
+               res.send(err.message, 500);
+               return;
+            }
+
+            res.json( removeNils(result) );
+         } );
+      }
+   );*/
+
+   return router;//.middleware.bind(router);
 }; 
 
 
@@ -119,8 +135,14 @@ var normalizeQuerystring = function(req, res, next) {
              specKey = specKeys[0];
 
          // behaviour for array fields
-         if (specKeys.length === 1 && specKey.substr(-2) === '[]')
-            query[key][specKey.substr(0, specKey.length-2)] = querystringValue.split(',');
+         /*if (specKeys.length === 1 && specKey.substr(-2) === '[]')
+            query[key][specKey.substr(0, specKey.length-2)] = querystringValue.split(',');*/
+          specKeys.forEach(function(specKey){
+            if(specKey.substr(-2) === '[]')
+              query[key][specKey.substr(0, specKey.length-2)] = querystringValue;
+            else
+              query[key][specKey] = querystringValue;
+          });
 
          //TODO implement behaviour for complex input objects
       } else {
